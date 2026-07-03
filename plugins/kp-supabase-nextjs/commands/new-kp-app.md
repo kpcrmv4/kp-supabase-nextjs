@@ -68,6 +68,10 @@ explicitly requested.
   `console.log` in prod.
 - Get `tsc --noEmit` **and** `next build` **GREEN before any commit**. Conventional
   commits. **No attribution footer.**
+- **Testing cadence** — follow the `kp-testing-cadence` skill: `tsc` every edit;
+  build + unit every ~2–3 units; E2E (Chrome MCP) at feature/phase gates **and**
+  immediately after any browser-only change (auth/cookie/middleware/redirect,
+  RLS-visible, realtime, PWA/SW, PDF, responsive). Record this in `CLAUDE.md`.
 - Never commit secrets; `.env.local` gitignored.
 
 Start now: confirm the product summary, run the one requirements question, then

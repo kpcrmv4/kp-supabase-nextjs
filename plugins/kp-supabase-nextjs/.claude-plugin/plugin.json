@@ -1,6 +1,6 @@
 {
   "name": "kp-supabase-nextjs",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "KP Supabase + Next.js SaaS Kit — SSR cookie auth (+PIN), RLS & migration workflow, react-pdf Thai clipping fix, PWA/web-push, Thai UI kit. Skills auto-load by task; ships an env-parameterized read-only Supabase MCP, /new-kp-app scaffolder, and /setup-supabase-mcp.",
   "author": {
     "name": "KP"

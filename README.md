@@ -28,6 +28,7 @@ Restart the session (or `/plugin`) so skills, commands, and the MCP load.
 | `react-pdf-thai` | Thai last-glyph clipping fix (`registerHyphenationCallback((w)=>[w])` + trailing-space + Sarabun), WebP-embed gotcha; ships copy-ready `thai.ts` |
 | `nextjs-pwa-webpush` | hand-rolled service worker, VAPID web push, in-app notification bell |
 | `thai-saas-ui-kit` | Tailwind tokens, sidebar ↔ bottom-nav shell, status/urgent badges, sonner/radix/lucide conventions |
+| `kp-testing-cadence` | when to run which check — `tsc` every edit, build+unit every ~2–3 units, E2E (Chrome MCP) at gates + after browser-only changes |
 
 ### Commands
 
