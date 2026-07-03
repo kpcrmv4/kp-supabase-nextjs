@@ -1,0 +1,20 @@
+{
+  "name": "kp-marketplace",
+  "owner": {
+    "name": "KP"
+  },
+  "metadata": {
+    "description": "KP personal Claude Code plugins",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "kp-supabase-nextjs",
+      "source": "./plugins/kp-supabase-nextjs",
+      "description": "KP Supabase + Next.js SaaS Kit — SSR cookie auth (+PIN), RLS & MCP migration workflow, react-pdf Thai fix, PWA/web-push, Thai UI kit. Includes /new-kp-app scaffolder.",
+      "version": "0.2.0",
+      "category": "development",
+      "keywords": ["nextjs", "supabase", "rls", "react-pdf", "thai", "pwa", "web-push", "ssr-auth"]
+    }
+  ]
+}
