@@ -4,12 +4,14 @@ description: >
   Design-system conventions and UI patterns for Thai-language admin/SaaS web apps
   built with Next.js + Tailwind v4. Use when setting up CSS-variable design
   tokens with light + dark mode (next-themes, class strategy), a responsive
-  app shell (desktop dark sidebar ↔ mobile bottom nav), status/category/urgent
-  badges, toasts instead of alert(), accessible modals for confirm/ask, IBM Plex
-  Sans Thai typography, print/A4 styles, and lucide icons (never emoji). Triggers
-  on: Tailwind tokens, design system, dark mode, theme toggle, next-themes,
-  bottom nav, sidebar, status badge, sonner toast, radix dialog confirm, Thai UI,
-  responsive app shell, print styles.
+  app shell (desktop dark sidebar ↔ mobile 5-slot bottom nav with a raised
+  center primary action and an "เพิ่มเติม" overflow bottom sheet when menus
+  exceed 5), status/category/urgent badges, toasts instead of alert(),
+  accessible modals for confirm/ask, IBM Plex Sans Thai typography, print/A4
+  styles, and lucide icons (never emoji). Triggers on: Tailwind tokens, design
+  system, dark mode, theme toggle, next-themes, bottom nav, bottom sheet, FAB,
+  center action button, more menu, เพิ่มเติม, sidebar, status badge, sonner
+  toast, radix dialog confirm, Thai UI, responsive app shell, print styles.
 metadata:
   type: reference
   stack: nextjs, tailwind, thai, radix, lucide
@@ -107,16 +109,59 @@ that never names a hex is automatically dark-ready.
 
 ## Responsive app shell (the core pattern)
 
-- **Desktop (≥ 860px):** left dark sidebar (~236px, `brand.sidebar`) with nav.
-- **Mobile (< 860px):** fixed **bottom nav bar** (requirement for small screens).
-  Optionally raise the primary action (center item) above the bar.
+- **Desktop (≥ 860px):** left dark sidebar (~236px, `brand.sidebar`) with nav —
+  the sidebar always shows **all** items; the 5-slot rule below is mobile-only.
+- **Mobile (< 860px):** fixed **bottom nav bar** (requirement for small screens)
+  with the 5-slot layout below.
 - One `nav` config drives both; role decides which items show. Landing route is
   role-aware (admin → dashboard, member → own board/overview).
 
 ```tsx
 // nav item shape reused by sidebar + bottom nav
-type NavItem = { href: string; label: string; icon: LucideIcon; roles: Role[] };
+type NavItem = {
+  href: string; label: string; icon: LucideIcon; roles: Role[];
+  primary?: boolean;   // exactly ONE item — the raised center action
+};
 ```
+
+### Bottom nav — 5 slots, raised center action, "เพิ่มเติม" overflow
+
+The bar always renders **exactly 5 slots**:
+
+| Slot | Content |
+|------|---------|
+| 1–2 | first two regular items |
+| **3 (center)** | the `primary` item — the product's key feature (scan, create, report), raised above the bar |
+| 4 | next regular item |
+| 5 | last regular item — **or "เพิ่มเติม"** when items overflow |
+
+Slot assignment from the role-filtered config:
+
+```tsx
+const visible = NAV.filter((i) => i.roles.includes(role));
+const primary = visible.find((i) => i.primary)!;          // slot 3
+const rest    = visible.filter((i) => !i.primary);
+const overflow = rest.length > 4 ? rest.slice(3) : [];    // sheet items
+const inBar    = rest.length > 4 ? rest.slice(0, 3) : rest; // slots 1,2,4(,5)
+```
+
+- **Center button (slot 3):** a raised circle (~60px) in `bg-brand text-white`
+  with the `pop` shadow, translated up so it overlaps the bar
+  (`-translate-y-1/3`), plus a `ring-4 ring-canvas` so it visually punches out
+  of the bar edge; its label sits under the bar row like the other slots.
+- **"เพิ่มเติม" (slot 5, only when > 5 menus):** `MoreHorizontal` icon. Tapping
+  opens a **bottom sheet** (radix dialog styled as a sheet: fixed bottom,
+  `rounded-t-card bg-card`, drag-handle bar, `animate-fadeUp`) listing **all
+  remaining items** in a 4-column icon+label grid. Navigating closes the sheet.
+- **Active states:** current route tints its slot with `text-brand`; when the
+  active route lives inside the overflow sheet, the "เพิ่มเติม" slot shows the
+  active tint instead.
+- **Bar chrome:** `fixed bottom-0 grid grid-cols-5 h-16 bg-card border-t
+  border-line` + `pb-[env(safe-area-inset-bottom)]` (iOS home indicator);
+  give the page content matching bottom padding so nothing hides behind it.
+- With ≤ 5 menus there is no "เพิ่มเติม" — slot 5 is just the last item. Never
+  squeeze 6+ icons into the bar, and never hide the `primary` action in the
+  sheet.
 
 ## Status / category / urgent badges
 
@@ -163,6 +208,9 @@ size, and lay out sheets with fixed widths so Thai wraps predictably.
       incl. status/urgent pairs; badges pass contrast in both themes.
 - [ ] `theme-color` meta per scheme; print + PDF forced light.
 - [ ] Desktop sidebar ↔ mobile bottom nav from one nav config; role-aware landing.
+- [ ] Bottom nav = 5 slots: one `primary` raised center action; > 5 menus → slot 5
+      is "เพิ่มเติม" opening a bottom sheet with the rest; active tint follows the
+      route (incl. routes inside the sheet); safe-area padding applied.
 - [ ] Status/urgent from tokens; category colors from DB; legend where colored.
 - [ ] lucide icons (no emoji); sonner toasts (no alert); radix confirm (no confirm()).
 - [ ] Thai fonts via next/font; org/signatory strings in `lib/constants.ts`.
