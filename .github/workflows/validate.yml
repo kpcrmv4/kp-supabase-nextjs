@@ -1,0 +1,30 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON files
+        run: |
+          set -e
+          for f in $(git ls-files '*.json'); do
+            echo "checking $f"
+            jq empty "$f"
+          done
+
+      - name: Validate SKILL.md frontmatter
+        run: |
+          set -e
+          for f in $(git ls-files 'plugins/*/skills/*/SKILL.md'); do
+            echo "checking $f"
+            head -1 "$f" | grep -qx -- '---' || { echo "missing frontmatter: $f"; exit 1; }
+            grep -q '^name:' "$f" || { echo "missing name: $f"; exit 1; }
+            grep -q '^description:' "$f" || { echo "missing description: $f"; exit 1; }
+          done

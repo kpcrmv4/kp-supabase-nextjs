@@ -10,11 +10,12 @@ auto-load by task description; ships a safe, env-parameterized Supabase MCP.
 
 | Skill | Covers |
 |-------|--------|
-| `nextjs-supabase-ssr-auth` | @supabase/ssr four clients, middleware gate, PIN/role login, and the two cookie bugs (API→/login redirect; route-handler sign-in cookie must bind to the response) |
-| `supabase-rls-schema` | RLS, `is_admin()` SECURITY DEFINER, column-guard triggers, file+MCP migration workflow, react-query/realtime |
+| `nextjs-supabase-ssr-auth` | @supabase/ssr four clients, proxy/middleware gate (`getClaims()`), rate-limited PIN login, new publishable/secret keys, and the two cookie bugs (API→/login redirect; route-handler sign-in cookie must bind to the response) |
+| `supabase-rls-schema` | RLS, `is_admin()` SECURITY DEFINER, column-guard triggers, file+MCP migration workflow, realtime broadcast-from-database, pg_cron + pg_net scheduled jobs |
+| `supabase-large-data` | the silent 1,000-row PostgREST cap — `.range()` discipline, page/infinite/keyset pagination, DB-side filters, RPC aggregates, virtualization, chunked exports |
 | `react-pdf-thai` | Thai last-glyph clipping fix (`registerHyphenationCallback((w)=>[w])` + trailing-space + Sarabun), WebP-embed gotcha; includes copy-ready `thai.ts` |
-| `nextjs-pwa-webpush` | hand-rolled service worker, VAPID web push, in-app notification bell |
-| `thai-saas-ui-kit` | Tailwind tokens, sidebar↔bottom-nav shell, status/urgent badges, sonner/radix/lucide conventions |
+| `nextjs-pwa-webpush` | hand-rolled service worker, VAPID web push (keys generated into `.env`), in-app notification bell, app-icon badge (Badging API) |
+| `thai-saas-ui-kit` | Tailwind v4 CSS-variable tokens with light+dark themes (next-themes), sidebar↔bottom-nav shell, status/urgent badges, sonner/radix/lucide conventions |
 | `kp-testing-cadence` | when to run which check — `tsc` every edit, build+unit every ~2–3 units, E2E (Chrome MCP) at gates + after browser-only changes |
 
 Cross-references the standalone `vercel-react-best-practices` and
@@ -23,10 +24,12 @@ Cross-references the standalone `vercel-react-best-practices` and
 ### Commands
 
 - `/new-kp-app [description]` — scaffold a new KP-style Next.js + Supabase SaaS
-  (Thai PWA): asks a short requirements round, writes `CLAUDE.md` as the plan,
-  then builds using the kit's skills and conventions.
+  (Thai PWA): asks a short requirements round (incl. Supabase OAuth-vs-PAT),
+  writes `CLAUDE.md` as the plan, generates VAPID/pepper/cron secrets into
+  `.env.local`, sets `vercel.json` to `sin1`, then builds using the kit's
+  skills and conventions.
 - `/setup-supabase-mcp` — bind the current repo to its own Supabase project MCP
-  (verify target first, PAT-based, read-only by default).
+  (asks OAuth vs PAT first, verifies target, read-only by default).
 
 ### MCP server
 
@@ -43,12 +46,14 @@ You supply `SUPABASE_PROJECT_REF` + `SUPABASE_ACCESS_TOKEN` **per project** (env
 a project-scoped `.mcp.json`). Read-only by default so it can't apply to the wrong
 project by accident. See `/setup-supabase-mcp`.
 
-## Install (local marketplace)
+## Install
 
 ```
-claude plugin marketplace add F:/claude-plugins/kp-marketplace
+claude plugin marketplace add kpcrmv4/kp-supabase-nextjs
 claude plugin install kp-supabase-nextjs@kp-marketplace
 ```
+
+(For a local checkout: `claude plugin marketplace add <path-to-this-repo>`.)
 
 Restart the session (or `/plugin`) so the skills, command, and MCP load.
 
@@ -60,6 +65,4 @@ Restart the session (or `/plugin`) so the skills, command, and MCP load.
 
 ## Notes
 
-- **Private**: a local marketplace is only on this machine. Nothing is published
-  or searchable. Push to GitHub later only if you choose.
 - **No secrets in the plugin**: safe to share — the MCP uses env placeholders.
