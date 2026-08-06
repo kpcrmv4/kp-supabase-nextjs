@@ -76,8 +76,9 @@ phase-by-phase).
   placeholders for the user. Never overwrite existing values (regenerated
   VAPID keys kill every push subscription). Remind the user to copy the same
   VAPID/pepper/cron values into Vercel env vars at deploy.
-- UI shell: desktop dark sidebar ↔ mobile bottom nav; role-aware landing;
-  light/dark tokens + next-themes toggle from the start.
+- UI shell: desktop dark sidebar ↔ mobile 5-slot bottom nav (raised center
+  `primary` action; "เพิ่มเติม" bottom sheet when menus exceed 5); role-aware
+  landing; light/dark tokens + next-themes toggle from the start.
 - Apply the two cookie bugfixes and the Thai-PDF fix by default.
 
 ## 4. Supabase wiring (per project)
