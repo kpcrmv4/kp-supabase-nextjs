@@ -23,11 +23,12 @@ Restart the session (or `/plugin`) so skills, commands, and the MCP load.
 
 | Skill | Covers |
 |-------|--------|
-| `nextjs-supabase-ssr-auth` | @supabase/ssr four clients, middleware gate, PIN/role login, and two cookie bugs: API→`/login` redirect, and route-handler sign-in cookies that must bind to the response |
-| `supabase-rls-schema` | RLS, `is_admin()` SECURITY DEFINER, column-guard triggers, file + MCP migration workflow, react-query/realtime |
+| `nextjs-supabase-ssr-auth` | @supabase/ssr four clients, proxy/middleware gate (`getClaims()`), rate-limited PIN login, new publishable/secret keys, and two cookie bugs: API→`/login` redirect, and route-handler sign-in cookies that must bind to the response |
+| `supabase-rls-schema` | RLS, `is_admin()` SECURITY DEFINER, column-guard triggers, file + MCP migration workflow, realtime broadcast-from-database, pg_cron + pg_net scheduled jobs |
+| `supabase-large-data` | the silent 1,000-row PostgREST cap — `.range()` discipline, page/infinite/keyset pagination, DB-side filters, RPC aggregates, virtualization, chunked exports |
 | `react-pdf-thai` | Thai last-glyph clipping fix (`registerHyphenationCallback((w)=>[w])` + trailing-space + Sarabun), WebP-embed gotcha; ships copy-ready `thai.ts` |
-| `nextjs-pwa-webpush` | hand-rolled service worker, VAPID web push, in-app notification bell |
-| `thai-saas-ui-kit` | Tailwind tokens, sidebar ↔ bottom-nav shell, status/urgent badges, sonner/radix/lucide conventions |
+| `nextjs-pwa-webpush` | hand-rolled service worker, VAPID web push (keys generated into `.env`), in-app notification bell, app-icon badge (Badging API) |
+| `thai-saas-ui-kit` | Tailwind v4 CSS-variable tokens with light + dark themes (next-themes), sidebar ↔ bottom-nav shell, status/urgent badges, sonner/radix/lucide conventions |
 | `kp-testing-cadence` | when to run which check — `tsc` every edit, build+unit every ~2–3 units, E2E (Chrome MCP) at gates + after browser-only changes |
 
 ### Commands
@@ -35,7 +36,7 @@ Restart the session (or `/plugin`) so skills, commands, and the MCP load.
 - `/new-kp-app [description]` — scaffold a new project: asks a short requirements
   round, writes `CLAUDE.md` as the plan, then builds with the kit.
 - `/setup-supabase-mcp` — bind the current repo to its own Supabase project MCP
-  (verify target first, PAT-based, read-only by default).
+  (asks OAuth vs PAT first, verifies target, read-only by default).
 
 ### MCP server
 

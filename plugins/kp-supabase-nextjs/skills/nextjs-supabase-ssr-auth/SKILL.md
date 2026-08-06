@@ -24,12 +24,23 @@ surrounding code and schema.
 
 ## Packages
 
-Pin the client to avoid the `never`-generics incompatibility:
+Use the **latest** `@supabase/supabase-js` + `@supabase/ssr` (the old
+`~2.47.0` / `0.5.2` pin worked around a generics bug fixed long ago — do not
+carry it forward).
 
-```jsonc
-"@supabase/supabase-js": "~2.47.0",   // pin: 2.48+ broke ssr 0.5.x generics
-"@supabase/ssr": "0.5.2"
-```
+### API keys — two generations
+
+New Supabase projects issue **publishable/secret** keys instead of the legacy
+JWT `anon`/`service_role` keys:
+
+| Legacy env var | Current equivalent |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_...`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | `SUPABASE_SECRET_KEY` (`sb_secret_...`) |
+
+Both work the same way in the client factories below (publishable ⇄ anon,
+secret ⇄ service-role). For a **new** project use the new keys; the snippets
+keep the legacy names only so existing repos match.
 
 ## The four clients — one file each
 
@@ -158,14 +169,21 @@ export async function updateSession(request: NextRequest) {
 ```
 
 ```ts
-// middleware.ts (repo root)
+// proxy.ts (repo root) — Next.js 16 renamed middleware.ts → proxy.ts
+// (on Next 15 keep the file named middleware.ts / export `middleware`)
 import { type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
-export async function middleware(request: NextRequest) { return updateSession(request); }
+export async function proxy(request: NextRequest) { return updateSession(request); }
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|icons/|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)'],
 };
 ```
+
+**Performance:** `auth.getUser()` makes a network round-trip to Supabase Auth
+on **every request**. Prefer `supabase.auth.getClaims()` in the middleware
+gate — with the project's asymmetric signing keys it verifies the JWT locally
+(no network call) and falls back to the server otherwise. Keep `getUser()`
+in route handlers that must be certain the session wasn't revoked.
 
 ## 🔴 Bug #1 — middleware redirects `POST /api/*` to `/login`
 
@@ -257,12 +275,14 @@ and **reset** each PIN; PINs must be unique.
    ```ts
    // lib/pin.ts
    import { createHash } from 'crypto';
-   const PEPPER = process.env.PIN_PEPPER || process.env.SUPABASE_SERVICE_ROLE_KEY || 'change-me';
-   export const isValidPin = (v: unknown): v is string => typeof v === 'string' && /^\d{4}$/.test(v);
+   const PEPPER = process.env.PIN_PEPPER;
+   if (!PEPPER) throw new Error('PIN_PEPPER is not configured'); // 🔴 no fallback —
+   // a default pepper would be shared by every deployment that forgot the env var.
+   export const isValidPin = (v: unknown): v is string => typeof v === 'string' && /^\d{4,6}$/.test(v);
    export const derivePassword = (pin: string) => 'pin_' + createHash('sha256').update(`${PEPPER}:${pin}`).digest('hex');
    ```
-   The seed script and every route must use the **same** `PEPPER` fallback so the
-   derived passwords match.
+   Generate `PIN_PEPPER` once per project (random 32 bytes, gitignored env) and
+   use the same value in the seed script and every route.
 3. **Sign-in route** (`/api/pin-login`): service-role finds the active staff row
    by `pin` → `admin.auth.admin.getUserById(id)` for the email → sign in with
    `derivePassword(pin)` using the **response-bound** client (Bug #2 fix).
@@ -270,14 +290,31 @@ and **reset** each PIN; PINs must be unique.
    check (`.eq('pin', pin).neq('id', targetId)` → `409` on conflict) →
    `admin.auth.admin.updateUserById(id, { password: derivePassword(pin) })` **and**
    `update({ pin })`. Keep both in sync.
-5. Login page defaults to a PIN keypad that auto-submits on the 4th digit, with a
-   toggle to the admin username/password form.
+5. Login page defaults to a PIN keypad that auto-submits on the last digit, with
+   a toggle to the admin username/password form.
+
+### 🔴 Rate-limit the PIN route — mandatory
+
+A 4-digit PIN has only 10,000 combinations; `/api/pin-login` without a limiter
+is brute-forceable in minutes. Non-negotiables:
+
+- **Throttle attempts** per IP *and* per targeted account: e.g. 5 failures →
+  block 15 minutes. Track in a `login_attempts` table (works across serverless
+  instances; an in-memory map does not) and prune old rows via pg_cron
+  ([supabase-rls-schema] scheduled-jobs section).
+- Return the same `401` for "wrong PIN" and "throttled-adjacent" probing; add a
+  `429` only once the block is active.
+- Prefer **6-digit** PINs when the client accepts it (`isValidPin` above allows
+  4–6) — 100× the search space at no UX cost on a keypad.
+- Log failures (who/IP/when) so an attack is visible, not silent.
 
 ## Checklist
 
-- [ ] `.env.local` holds `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-      `SUPABASE_SERVICE_ROLE_KEY` (+ `PIN_PEPPER` if used). Gitignored, never committed.
-- [ ] Middleware excludes `/api/*` from the login redirect.
+- [ ] `.env.local` holds the Supabase URL + publishable/anon key + secret/
+      service-role key (+ `PIN_PEPPER` if used). Gitignored, never committed.
+- [ ] Middleware (`proxy.ts` on Next 16) excludes `/api/*` from the login
+      redirect; gate uses `getClaims()`, not a per-request `getUser()`.
+- [ ] `/api/pin-login` is rate-limited (per IP + per account) with failures logged.
 - [ ] Every server-side sign-in route binds cookies to the response object.
 - [ ] Service-role client is imported only in server code.
 - [ ] Role is set server-side only; `handle_new_user` never trusts client metadata.

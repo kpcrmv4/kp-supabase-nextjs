@@ -5,10 +5,12 @@ description: >
   file+MCP migration workflow for Supabase projects. Use when designing tables
   with RLS, writing SECURITY DEFINER helpers, guarding column-level updates with
   triggers, avoiding RLS recursion, private Storage bucket policies, or applying
-  migrations via the Supabase MCP. Also covers @tanstack/react-query + Supabase
-  Realtime wiring. Triggers on: RLS policy, auth.uid(), is_admin(), security
-  definer, guard trigger, apply_migration, get_advisors, generate_typescript_types,
-  storage policy, realtime subscription.
+  migrations via the Supabase MCP. Also covers @tanstack/react-query + Realtime
+  broadcast-from-database wiring, and scheduled jobs with pg_cron + pg_net
+  (instead of Vercel Hobby cron). Triggers on: RLS policy, auth.uid(),
+  is_admin(), security definer, guard trigger, apply_migration, get_advisors,
+  generate_typescript_types, storage policy, realtime subscription, broadcast,
+  realtime.messages, pg_cron, pg_net, cron job.
 metadata:
   type: reference
   stack: supabase, postgres, nextjs, react-query
@@ -164,20 +166,91 @@ serve via **signed URLs**. Path convention: `tasks/{task_id}/{before|after}/{uui
 Store the `storage_path` in a `*_photos` table (a separate row per photo ⇒
 unbounded photos per set).
 
-## Client data layer — react-query + Realtime
+## Client data layer — react-query + Realtime (Broadcast)
 
 - Server state lives in `@tanstack/react-query`; never mirror it into a client
   store. Centralize query keys (`qk.tasks`, `qk.notifications(userId)`).
-- Live board: subscribe to Postgres changes and invalidate the relevant key.
+- Paginated lists: see **[supabase-large-data]** — invalidate key prefixes,
+  never patch pages by hand.
+
+Use **broadcast from database**, not `postgres_changes`. `postgres_changes`
+re-checks RLS per change × per subscriber on a single-threaded pipeline — it
+degrades as users/writes grow, and Supabase recommends broadcast for new apps.
+Broadcast authorizes once at subscribe time via RLS on `realtime.messages`,
+and topics map cleanly to this kit's two cases: a shared `tasks` board and a
+per-user `user:{id}` notification feed.
+
+Migration (trigger + topic policy — fits the file+MCP workflow above):
+
+```sql
+create or replace function public.tasks_broadcast()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  perform realtime.broadcast_changes(
+    'tasks',                       -- topic
+    TG_OP, TG_OP, TG_TABLE_NAME, TG_TABLE_SCHEMA, new, old);
+  return null;
+end $$;
+
+create trigger tasks_broadcast
+  after insert or update or delete on public.tasks
+  for each row execute function public.tasks_broadcast();
+
+create policy tasks_topic_read on realtime.messages
+  for select to authenticated
+  using (realtime.topic() = 'tasks' and extension = 'broadcast');
+```
+
+Per-user feed: topic `'user:' || new.user_id` in the trigger, and the policy
+checks `realtime.topic() = 'user:' || auth.uid()::text`.
+
+Client — private channel, set auth first, payload is only a signal:
 
 ```ts
+await supabase.realtime.setAuth();
 const ch = supabase
-  .channel('tasks')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' },
-      () => queryClient.invalidateQueries({ queryKey: qk.tasks }))
+  .channel('tasks', { config: { private: true } })
+  .on('broadcast', { event: 'INSERT' }, invalidate)
+  .on('broadcast', { event: 'UPDATE' }, invalidate)
+  .on('broadcast', { event: 'DELETE' }, invalidate)
   .subscribe();
 return () => { supabase.removeChannel(ch); };
+// invalidate = () => queryClient.invalidateQueries({ queryKey: qk.tasks })
 ```
+
+`postgres_changes` remains acceptable for a quick prototype only — do not
+ship it in a product expected to grow.
+
+## Scheduled jobs — pg_cron + pg_net (not Vercel cron)
+
+Vercel's free (Hobby) tier allows **2 cron jobs, each once per day**, with
+loose timing — useless for anything recurring. Default to **pg_cron** in the
+database; it's SQL, so it lives in a migration like everything else:
+
+```sql
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
+
+-- SQL-only jobs need no HTTP at all (cleanup, pruning, roll-ups):
+select cron.schedule('prune-login-attempts', '0 */6 * * *',
+  $$ delete from public.login_attempts where created_at < now() - interval '1 day' $$);
+
+-- Jobs that must run app code call a protected route via pg_net:
+select cron.schedule('notify-overdue-tasks', '*/15 * * * *', $$
+  select net.http_post(
+    url     := 'https://<app>.vercel.app/api/cron/overdue',
+    headers := jsonb_build_object('Authorization', 'Bearer ' || '<CRON_SECRET>'),
+    body    := '{}'::jsonb);
+  $$);
+```
+
+- `cron.schedule` with an existing job name **updates** it — idempotent, safe
+  to re-run in migrations.
+- 🔴 **pg_cron runs in UTC.** Thai time is UTC+7: 08:00 น. ไทย = `0 1 * * *`.
+- Every `/api/cron/*` route must verify the `CRON_SECRET` bearer header
+  (generated into `.env` at scaffold — see `/new-kp-app`) before doing work.
+- Prefer pure-SQL jobs over HTTP whenever the work is data-only.
+- Vercel cron is still fine for ≤ 2 once-a-day, timing-insensitive jobs.
 
 ## Checklist
 
@@ -188,4 +261,7 @@ return () => { supabase.removeChannel(ch); };
 - [ ] Migration is a file **and** applied via MCP to the **verified** project.
 - [ ] `get_advisors` run and clean; `database.types.ts` regenerated.
 - [ ] FKs and filter columns indexed; Storage bucket private + signed URLs.
+- [ ] Realtime uses broadcast-from-database (private channels + `realtime.messages` policies).
+- [ ] Recurring jobs on pg_cron (UTC! Thai = UTC+7); `/api/cron/*` verifies `CRON_SECRET`.
+- [ ] List queries paginated per [supabase-large-data] — nothing relies on the 1,000-row default.
 ```

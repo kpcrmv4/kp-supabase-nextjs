@@ -6,10 +6,12 @@ description: >
   a manifest, offline shell, install prompt, push subscriptions, or server-sent
   push on domain events (assigned / reported / approved). Covers the SW (precache,
   network-first navigation, push + notificationclick), the required next.config
-  headers so /sw.js updates, VAPID key handling, the web-push sender that prunes
-  dead endpoints, and the notifications table + bell pattern. Triggers on: PWA,
-  service worker, manifest, web push, VAPID, web-push, push_subscriptions,
-  notification bell, offline.
+  headers so /sw.js updates, VAPID key handling (generated into .env at
+  scaffold), the web-push sender that prunes dead endpoints, the notifications
+  table + bell pattern, and the app-icon badge number (Badging API,
+  setAppBadge in-app + from the SW push handler). Triggers on: PWA, service
+  worker, manifest, web push, VAPID, web-push, push_subscriptions,
+  notification bell, offline, app badge, setAppBadge, ตัวเลขบนไอคอน.
 metadata:
   type: reference
   stack: nextjs-app-router, web-push, supabase
@@ -27,7 +29,7 @@ Precache the shell, network-first for navigations with an offline fallback, and
 handle push + click:
 
 ```js
-const CACHE = 'app-v1';
+const CACHE = 'app-v1';   // bump on each deploy that changes precached files
 const PRECACHE = ['/offline.html', '/icons/icon-192.png', '/manifest.webmanifest'];
 
 self.addEventListener('install', (e) =>
@@ -53,14 +55,24 @@ self.addEventListener('fetch', (e) => {
 });
 
 self.addEventListener('push', (e) => {
-  let d = { title: 'แจ้งเตือน', body: '', url: '/', taskId: undefined, urgent: false };
+  let d = { title: 'แจ้งเตือน', body: '', url: '/', taskId: undefined, urgent: false, unreadCount: undefined };
   try { if (e.data) d = { ...d, ...e.data.json() }; } catch { if (e.data) d.title = e.data.text(); }
-  e.waitUntil(self.registration.showNotification(d.title, {
-    body: d.body, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png', lang: 'th',
-    data: { url: d.url || '/' }, tag: d.taskId || undefined,
-    requireInteraction: !!d.urgent,                       // urgent stays on screen
-    vibrate: d.urgent ? [200, 100, 200, 100, 200] : undefined,
-  }));
+  e.waitUntil((async () => {
+    // App icon badge while the app is closed — payload carries the count
+    // (the SW can't query the DB itself; the server already knows the number).
+    if (typeof d.unreadCount === 'number' && self.navigator.setAppBadge) {
+      try {
+        if (d.unreadCount > 0) await self.navigator.setAppBadge(d.unreadCount);
+        else await self.navigator.clearAppBadge();
+      } catch {}
+    }
+    await self.registration.showNotification(d.title, {
+      // badge = monochrome status-bar glyph (Android), NOT the app-icon number.
+      body: d.body, icon: '/icons/icon-192.png', badge: '/icons/badge-96.png', lang: 'th',
+      data: { url: d.url || '/' }, tag: d.taskId || undefined,
+      requireInteraction: !!d.urgent,                     // urgent stays on screen
+    });
+  })());
 });
 
 self.addEventListener('notificationclick', (e) => {
@@ -100,9 +112,16 @@ behaviour silently drift from your code.
 
 ## Web Push — VAPID
 
-Generate VAPID keys once (`npx web-push generate-vapid-keys`). Public key →
-`NEXT_PUBLIC_VAPID_PUBLIC_KEY`; private key → `VAPID_PRIVATE_KEY` (server only,
-never committed). Store subscriptions in `push_subscriptions` (endpoint unique).
+Generate VAPID keys **at scaffold time** and write them into `.env.local`
+(`/new-kp-app` does this): `npx web-push generate-vapid-keys --json` →
+`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (server only, never
+committed), `VAPID_SUBJECT`.
+
+- 🔴 **Generate once, keep forever.** New keys invalidate every existing push
+  subscription — users must re-subscribe. Never overwrite keys already
+  present in `.env.local`.
+- Copy the **same** key pair into the Vercel project's env vars on deploy.
+- Store subscriptions in `push_subscriptions` (endpoint unique).
 
 Sender that prunes dead endpoints (410/404):
 
@@ -135,8 +154,9 @@ export async function sendPush(subs, payload): Promise<string[]> {
 ```
 
 Routes: `POST /api/push/subscribe` (store subscription for `auth.uid()`),
-`POST /api/notify` (server event → insert `notifications` rows + `sendPush` to the
-target users' subscriptions; delete returned dead endpoints).
+`POST /api/notify` (server event → insert `notifications` rows, **count that
+user's unread rows**, then `sendPush` with `unreadCount` in the payload; delete
+returned dead endpoints). The count powers the app-icon badge below.
 
 ## In-app notifications (realtime bell)
 
@@ -159,6 +179,37 @@ target users' subscriptions; delete returned dead endpoints).
 - For urgent events, also show an in-app popup on login + on realtime arrival
   (a modal driven by unread `type = 'urgent'`), independent of OS push permission.
 
+## App icon badge (Badging API) — the number on the home-screen icon
+
+The badge number is **not** automatic with push — it must be set explicitly,
+in **two** places:
+
+1. **App open** — sync it wherever the bell's unread count changes
+   (realtime arrival, mark-read, initial load):
+
+   ```ts
+   export function syncAppBadge(unread: number) {
+     if (!('setAppBadge' in navigator)) return;          // feature-detect always
+     if (unread > 0) navigator.setAppBadge(unread).catch(() => {});
+     else navigator.clearAppBadge().catch(() => {});
+   }
+   ```
+
+2. **App closed** — the SW push handler sets it from `unreadCount` in the
+   payload (already wired above). This is the path that matters on iOS.
+
+Platform limits (state these in the product, don't fight them):
+
+- Badges appear only on an **installed** PWA (home screen / installed app) —
+  never in a plain browser tab. Pairs with the install prompt above.
+- **iOS 16.4+** supports web push + badge for home-screen PWAs; the badge must
+  come from the SW handler (place #2).
+- **Android** shows a notification dot rather than a Web-Badging number — the
+  badge is a bonus surface, in-app + push remain the primary channels.
+- `setAppBadge(count)` is distinct from the `badge` option of
+  `showNotification()` (a monochrome Android status-bar glyph — use a
+  dedicated white-on-transparent `badge-96.png`, not the color app icon).
+
 ## Triggers (typical)
 
 assigned → notify assignee · reported → notify admins · approved / sent-back →
@@ -167,9 +218,13 @@ notify the member. Fire both the in-app insert and the web push in the same rout
 ## Checklist
 
 - [ ] `/sw.js` served with `no-cache` + `Service-Worker-Allowed: /`.
-- [ ] Manifest + icons (192/512/maskable); install prompt wired.
-- [ ] VAPID private key server-only, gitignored.
+- [ ] Manifest + icons (192/512/maskable) + monochrome `badge-96.png`; install prompt wired.
+- [ ] VAPID keys generated once into `.env.local` (never overwritten), private key
+      server-only, same pair set in Vercel env.
 - [ ] `push_subscriptions.endpoint` unique; dead endpoints pruned after send.
 - [ ] Notification click navigates immediately, marks read best-effort.
 - [ ] Urgent events get an in-app popup, not just OS push.
+- [ ] App-icon badge synced in-app (`syncAppBadge`) **and** from the SW push
+      handler via `unreadCount`; cleared when everything is read.
+- [ ] Badge tested with the app fully closed on an installed PWA (incl. iOS).
 ```
