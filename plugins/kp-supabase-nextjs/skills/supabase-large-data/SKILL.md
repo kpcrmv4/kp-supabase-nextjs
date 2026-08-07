@@ -63,6 +63,8 @@ export async function fetchTasksPage(page: number, filters: Filters) {
   tables use `'estimated'` (fast, close enough for a pager) or `'planned'`.
 - Keep `page`, `filters` in the react-query key:
   `qk.tasks(page, filters)` — never refetch-all-and-slice on the client.
+- Pager visuals (Thai range text, page numbers, URL state, mobile rules):
+  see the **Pagination UI** section of [thai-saas-ui-kit].
 
 ## Infinite scroll (`useInfiniteQuery`)
 

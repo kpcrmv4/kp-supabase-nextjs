@@ -13,8 +13,8 @@ description: >
   on: Tailwind tokens, design system, dark mode, theme toggle, next-themes,
   bottom nav, bottom sheet, FAB, center action button, more menu, เพิ่มเติม,
   sidebar, status badge, skeleton, loading state, empty state, error state,
-  loading.tsx, error.tsx, sonner toast, radix dialog confirm, Thai UI,
-  responsive app shell, print styles.
+  loading.tsx, error.tsx, pagination UI, pager, page numbers, แสดง...จาก...รายการ,
+  sonner toast, radix dialog confirm, Thai UI, responsive app shell, print styles.
 metadata:
   type: reference
   stack: nextjs, tailwind, thai, radix, lucide
@@ -232,6 +232,30 @@ return <TaskList rows={data} />;
   keepPreviousData` so page changes keep showing the previous page instead of
   flashing skeletons; infinite scroll appends a small bottom loader row only.
 
+## Pagination UI
+
+Data side (`.range()`, counts, keyset, infinite) lives in
+**[supabase-large-data]** — this is the visible pager convention:
+
+- **Desktop tables: pager row under the table.** Left side shows the range in
+  Thai — `แสดง 1–50 จาก 1,234 รายการ` (numbers via
+  `toLocaleString('th-TH')`; total from `count`). Right side: `ChevronLeft` /
+  `ChevronRight` buttons + page numbers (current ±2 with `…` ellipsis, first/
+  last always reachable). Active page = `bg-brand text-white`; bound buttons
+  `disabled`, not hidden.
+- **Page size** select (25/50/100) only on admin tables that need it; default
+  50 and persist the choice.
+- **Mobile: no numbered pager.** Prefer infinite scroll (`useInfiniteQuery` +
+  bottom loader row); if a discrete pager is unavoidable, use only
+  ก่อนหน้า / ถัดไป chips with the range text between. Touch targets ≥ 44px.
+- **Page state lives in the URL** (`?page=2` via searchParams) so refresh,
+  back, and shared links land on the same page. Changing any filter/search
+  resets to page 1 (and the URL). Infinite feeds skip URL state.
+- Page transitions keep previous data (`keepPreviousData` — see the states
+  section above): the table stays put, no skeleton flash between pages.
+- Empty page guard: if a page beyond the last (stale URL, deleted rows) comes
+  back empty, snap to the last valid page instead of showing an empty table.
+
 ## Print / A4
 
 For printable reports rendered as HTML (vs the PDF path — see **[react-pdf-thai]**):
@@ -254,6 +278,8 @@ size, and lay out sheets with fixed widths so Thai wraps predictably.
       shift), Thai error card + retry, designed empty state, success.
 - [ ] Mutations: pending buttons disabled + inline spinner; failures toast in Thai.
 - [ ] Page transitions keep previous data (`keepPreviousData`), no skeleton flash.
+- [ ] Pager: Thai range text (`แสดง x–y จาก z รายการ`), page in URL, filter
+      resets to page 1; mobile uses infinite scroll or ก่อนหน้า/ถัดไป only.
 - [ ] Thai fonts via next/font; org/signatory strings in `lib/constants.ts`.
 - [ ] Print styles hide chrome and lay out A4.
 ```
