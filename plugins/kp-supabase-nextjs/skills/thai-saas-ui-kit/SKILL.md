@@ -6,12 +6,15 @@ description: >
   tokens with light + dark mode (next-themes, class strategy), a responsive
   app shell (desktop dark sidebar ↔ mobile 5-slot bottom nav with a raised
   center primary action and an "เพิ่มเติม" overflow bottom sheet when menus
-  exceed 5), status/category/urgent badges, toasts instead of alert(),
-  accessible modals for confirm/ask, IBM Plex Sans Thai typography, print/A4
-  styles, and lucide icons (never emoji). Triggers on: Tailwind tokens, design
-  system, dark mode, theme toggle, next-themes, bottom nav, bottom sheet, FAB,
-  center action button, more menu, เพิ่มเติม, sidebar, status badge, sonner
-  toast, radix dialog confirm, Thai UI, responsive app shell, print styles.
+  exceed 5), status/category/urgent badges, loading skeletons + empty + error
+  states (loading.tsx / error.tsx boundaries, retry cards, pending buttons),
+  toasts instead of alert(), accessible modals for confirm/ask, IBM Plex Sans
+  Thai typography, print/A4 styles, and lucide icons (never emoji). Triggers
+  on: Tailwind tokens, design system, dark mode, theme toggle, next-themes,
+  bottom nav, bottom sheet, FAB, center action button, more menu, เพิ่มเติม,
+  sidebar, status badge, skeleton, loading state, empty state, error state,
+  loading.tsx, error.tsx, sonner toast, radix dialog confirm, Thai UI,
+  responsive app shell, print styles.
 metadata:
   type: reference
   stack: nextjs, tailwind, thai, radix, lucide
@@ -195,6 +198,40 @@ Style overlay + content with the `pop` shadow and `card` radius.
 `sonner` `<Toaster position="top-right" />` (or bottom-center pill). Replace every
 `alert()`/`window.confirm()` with a toast or the confirm modal.
 
+## Loading / skeleton / empty / error states
+
+Every data view ships **four states** — loading, error, empty, success — and
+the first three are designed, not left as a blank screen:
+
+```tsx
+if (isPending) return <TaskListSkeleton />;
+if (isError)  return <ErrorState onRetry={refetch} />;
+if (!data.length) return <EmptyState />;
+return <TaskList rows={data} />;
+```
+
+- **Skeleton, not spinner, for content areas.** Shape-match the real layout
+  (card grid → card skeletons; table → row skeletons) with token-based blocks:
+  `bg-line animate-pulse rounded-card` — tokens keep skeletons correct in dark
+  mode too. Match real row heights (Thai rows are taller) so the swap causes
+  **zero layout shift**. Render 3–6 placeholder rows, not a screenful.
+- **Spinners only for small inline waits**: a pending button shows a spinner
+  inside the button, `disabled` to block double-submit; mutations surface
+  failure as a sonner error toast (Thai copy), success as a quiet toast or none.
+- **Error state = friendly Thai message + retry.** A card with a lucide icon,
+  "โหลดข้อมูลไม่สำเร็จ", and a "ลองใหม่" button wired to `refetch()`. Never
+  print raw error/stack text into the UI — log it server-side instead.
+- **Empty state ≠ error.** Icon + one Thai sentence + a CTA when the user can
+  act (e.g. "ยังไม่มีงาน — สร้างงานแรก"); filtered-to-empty lists say the
+  filter found nothing and offer to clear it.
+- **App Router boundaries:** `loading.tsx` per route segment renders the page
+  skeleton; `error.tsx` (client) wraps the segment with the retry card via
+  `reset()`. Pick **one** skeleton owner per view — route-level `loading.tsx`
+  or component-level `isPending` — never both stacked.
+- **Pagination polish** ([supabase-large-data]): pass `placeholderData:
+  keepPreviousData` so page changes keep showing the previous page instead of
+  flashing skeletons; infinite scroll appends a small bottom loader row only.
+
 ## Print / A4
 
 For printable reports rendered as HTML (vs the PDF path — see **[react-pdf-thai]**):
@@ -213,6 +250,10 @@ size, and lay out sheets with fixed widths so Thai wraps predictably.
       route (incl. routes inside the sheet); safe-area padding applied.
 - [ ] Status/urgent from tokens; category colors from DB; legend where colored.
 - [ ] lucide icons (no emoji); sonner toasts (no alert); radix confirm (no confirm()).
+- [ ] Every data view has all four states: shape-matched skeleton (no layout
+      shift), Thai error card + retry, designed empty state, success.
+- [ ] Mutations: pending buttons disabled + inline spinner; failures toast in Thai.
+- [ ] Page transitions keep previous data (`keepPreviousData`), no skeleton flash.
 - [ ] Thai fonts via next/font; org/signatory strings in `lib/constants.ts`.
 - [ ] Print styles hide chrome and lay out A4.
 ```

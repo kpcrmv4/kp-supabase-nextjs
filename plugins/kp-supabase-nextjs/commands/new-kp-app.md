@@ -97,6 +97,8 @@ requested.
 - RLS on **every** table; role set server-side only (never trust client metadata).
 - **Every list query `.order()` + `.range()`** — nothing may rely on the
   1,000-row default (`supabase-large-data`).
+- **Every data view ships four states** — skeleton / error+retry / empty /
+  success (`thai-saas-ui-kit`); pending buttons disabled with inline spinner.
 - Small files (< 800 lines), immutable updates, explicit error handling, no
   `console.log` in prod.
 - Get `tsc --noEmit` **and** `next build` **GREEN before any commit**. Conventional
