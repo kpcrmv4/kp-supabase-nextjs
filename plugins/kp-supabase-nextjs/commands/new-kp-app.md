@@ -10,9 +10,9 @@ the planning step.
 ## 0. Load the kit
 As you work, pull these skills (they auto-load by topic — reference them
 explicitly if needed): `nextjs-supabase-ssr-auth`, `supabase-rls-schema`,
-`supabase-large-data`, `react-pdf-thai`, `nextjs-pwa-webpush`,
-`thai-saas-ui-kit`, plus `vercel-react-best-practices` and
-`supabase-postgres-best-practices`.
+`supabase-large-data`, `nextjs-gotchas`, `react-pdf-thai`, `nextjs-pwa-webpush`,
+`thai-saas-ui-kit`, `kp-e2e-playwright-real-db`, plus
+`vercel-react-best-practices` and `supabase-postgres-best-practices`.
 
 ## 1. Gather requirements (ONE short round)
 - Product summary: if `$ARGUMENTS` is non-empty, use it as the summary; otherwise
@@ -70,6 +70,8 @@ phase-by-phase).
   broadcast triggers + `realtime.messages` policies; pg_cron jobs as needed.
 - `vercel.json` with `{ "regions": ["sin1"] }` — functions must sit in the same
   region as the Supabase project (Singapore).
+- `next.config` with `allowedDevOrigins: ['localhost', '127.0.0.1', '*.localhost']`
+  (Next 16 dev blocks cross-origin chunks → silent hydration death; `nextjs-gotchas`).
 - `.env.local`: **generate** what is generatable — VAPID key pair
   (`npx web-push generate-vapid-keys --json`), `PIN_PEPPER`, `CRON_SECRET`
   (random 32 bytes each) — and leave the Supabase URL/keys as **BLANK**
@@ -99,8 +101,17 @@ requested.
   1,000-row default (`supabase-large-data`).
 - **Every data view ships four states** — skeleton / error+retry / empty /
   success (`thai-saas-ui-kit`); pending buttons disabled with inline spinner.
-- Small files (< 800 lines), immutable updates, explicit error handling, no
-  `console.log` in prod.
+- Small files (< 800 lines), immutable updates, no `console.log` in prod.
+- **Destructure `error` from every Supabase call** — unchecked errors are
+  silent no-ops (`nextjs-supabase-ssr-auth`).
+- **Every API endpoint has a reachable UI** — an endpoint with no button is an
+  endpoint nobody tests — and its allowed roles must **match** where the UI
+  actually sits.
+- **Log every trap into `CLAUDE.md` the moment it's found** — the second
+  encounter must cost nothing.
+- On Windows: never edit Thai-text files via PowerShell pipes (silent mojibake
+  in PS 5.1) — use the agent's Edit/Write tools, or .NET
+  `WriteAllText(..., UTF8Encoding(false))` if a script is unavoidable.
 - Get `tsc --noEmit` **and** `next build` **GREEN before any commit**. Conventional
   commits. **No attribution footer.**
 - **Testing cadence** — follow the `kp-testing-cadence` skill: `tsc` every edit;

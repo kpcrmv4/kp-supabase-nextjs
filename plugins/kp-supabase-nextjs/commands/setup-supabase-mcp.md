@@ -51,5 +51,22 @@ Do the following, carefully:
    matches `vercel.json` — the kit defaults both to Singapore). Only then run
    migrations.
 
+## Fallback: run SQL without the MCP (mid-session, PAT available)
+
+An MCP added mid-session isn't loaded until restart. Instead of blocking,
+write a small script against the Supabase Management API — with the bonus that
+the **expected project ref is locked into the script**, so it cannot migrate
+the wrong database:
+
+```js
+// scripts/db.mjs — always verify the ref before firing
+if (process.env.SUPABASE_PROJECT_REF !== EXPECTED_REF) throw new Error('project ref mismatch');
+await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${pat}`, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ query: sql }),
+});
+```
+
 Related skills: **supabase-rls-schema** (migration workflow, RLS, pg_cron) and
 **nextjs-supabase-ssr-auth** (the app-side clients).

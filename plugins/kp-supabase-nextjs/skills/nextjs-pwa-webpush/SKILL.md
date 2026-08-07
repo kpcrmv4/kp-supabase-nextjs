@@ -158,6 +158,21 @@ Routes: `POST /api/push/subscribe` (store subscription for `auth.uid()`),
 user's unread rows**, then `sendPush` with `unreadCount` in the payload; delete
 returned dead endpoints). The count powers the app-icon badge below.
 
+### 🔴 Dispatch AFTER the response — never in the user's request
+
+Awaiting the fan-out inside an action/route made one status click take **26
+seconds** in production. Two rules ([nextjs-gotchas] #5):
+
+```ts
+import { after } from 'next/server';
+// in the action/route: respond first, dispatch after
+after(() => dispatchNotifications(eventPayload));
+```
+
+- Inside the dispatcher, fetch **all** target users' subscriptions in **one**
+  query (`.in('user_id', userIds)`), then send in parallel with
+  `Promise.allSettled` — never a query per user per loop (26s → 2.8s).
+
 ## In-app notifications (realtime bell)
 
 - Insert a `notifications` row per event (`type`, `title`, `body`, `task_id`).
@@ -227,4 +242,5 @@ notify the member. Fire both the in-app insert and the web push in the same rout
 - [ ] App-icon badge synced in-app (`syncAppBadge`) **and** from the SW push
       handler via `unreadCount`; cleared when everything is read.
 - [ ] Badge tested with the app fully closed on an installed PWA (incl. iOS).
+- [ ] Push dispatch runs via `after()`, one subscriptions query, `Promise.allSettled`.
 ```

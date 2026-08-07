@@ -5,11 +5,14 @@ description: >
   @supabase/ssr. Use when setting up login, session middleware, protected routes,
   role-based access (admin/staff), service-role admin routes, or a numeric PIN
   login. Encodes the four client factories (browser/server/admin/middleware), the
-  middleware auth gate, and two hard-won bugs: (1) middleware redirecting /api/*
-  to the HTML login page so server-side sign-in never sets a cookie, and (2)
+  middleware auth gate, and three hard-won bugs: (1) middleware redirecting /api/*
+  to the HTML login page so server-side sign-in never sets a cookie, (2)
   route-handler sign-in cookies not propagating because they were written via
-  next/headers cookies() instead of onto the response. Triggers on: supabase auth,
-  @supabase/ssr, middleware session, signInWithPassword, RLS auth.uid(), PIN login.
+  next/headers cookies() instead of onto the response, and (3) redirect loops
+  between middleware and the login page on special states. Also: signOut scope
+  'local' vs global, and the destructure-error-every-time rule. Triggers on:
+  supabase auth, @supabase/ssr, middleware session, signInWithPassword, RLS
+  auth.uid(), PIN login, signOut, redirect loop, rate limit.
 metadata:
   type: reference
   stack: nextjs-app-router, supabase, typescript
@@ -246,6 +249,40 @@ Admin username/password login done with the **browser** client
 (`getSupabaseBrowser().auth.signInWithPassword`) does not hit this bug — the
 browser sets its own cookies. This only bites **server-side** sign-in routes.
 
+## 🔴 Bug #3 — redirect loop between middleware and the login page
+
+Real case: a suspended org → middleware bounces to `/login?suspended=1` → the
+login page sees a live session and bounces back to `/` → infinite loop, blank
+page. **Every time you add a redirect condition, trace whether the destination
+redirects back.** For special states (suspended, no-profile, forced password
+change) the login page must be allowed to **stay put** — show the reason and a
+sign-out button instead of auto-redirecting logged-in users away.
+
+## `signOut()` defaults to kicking every device
+
+The default is `scope: 'global'` — logging out on a phone silently ends the
+desktop session too. For a normal logout button:
+
+```ts
+await supabase.auth.signOut({ scope: 'local' });
+```
+
+Reserve `'global'` for an explicit "ออกจากระบบทุกอุปกรณ์" action.
+
+## Error discipline — destructure `error` every time
+
+Supabase clients **never throw** on query errors. Un-checked `error` = silent
+no-op: a real audit-log insert was RLS-rejected for a month with zero rows
+written and zero errors surfaced.
+
+```ts
+const { error } = await sb.from('audit_logs').insert({...});
+if (error) console.error('[audit] insert failed', { action, error: error.message });
+```
+
+Rule: every `await supabase...` destructures and handles `error` — logging is
+the floor, ignoring is never acceptable.
+
 ## Role model + profile bootstrap
 
 - One `profiles` row per `auth.users` (1:1), created by a `handle_new_user`
@@ -319,4 +356,7 @@ is brute-forceable in minutes. Non-negotiables:
 - [ ] Service-role client is imported only in server code.
 - [ ] Role is set server-side only; `handle_new_user` never trusts client metadata.
 - [ ] Client profile reads use explicit columns when a protected column (e.g. `pin`) exists.
+- [ ] New redirect conditions traced end-to-end (no middleware↔login loops);
+      special states can stay on /login with a reason + sign-out.
+- [ ] Logout uses `scope: 'local'`; every Supabase call checks `error`.
 ```
