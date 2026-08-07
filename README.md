@@ -26,6 +26,8 @@ Restart the session (or `/plugin`) so skills, commands, and the MCP load.
 | `nextjs-supabase-ssr-auth` | @supabase/ssr four clients, proxy/middleware gate (`getClaims()`), rate-limited PIN login, new publishable/secret keys, and two cookie bugs: API→`/login` redirect, and route-handler sign-in cookies that must bind to the response |
 | `supabase-rls-schema` | RLS, `is_admin()` SECURITY DEFINER, column-guard triggers, file + MCP migration workflow, realtime broadcast-from-database, pg_cron + pg_net scheduled jobs |
 | `supabase-large-data` | the silent 1,000-row PostgREST cap — `.range()` discipline, page/infinite/keyset pagination, DB-side filters, RPC aggregates, virtualization, chunked exports |
+| `nextjs-gotchas` | silent failures: allowedDevOrigins hydration death, Tailwind JIT vs new folders, loading.tsx breaking notFound() 404, revalidatePath layout purge, after() fan-out, NEXT_PUBLIC baked at start |
+| `kp-e2e-playwright-real-db` | Playwright against the real DB — per-role storageState (auth rate limits), org-scoped assertions, serial shared data, "did not run" reading, warm-up, hydration-signal clicks |
 | `react-pdf-thai` | Thai last-glyph clipping fix (`registerHyphenationCallback((w)=>[w])` + trailing-space + Sarabun), WebP-embed gotcha; ships copy-ready `thai.ts` |
 | `nextjs-pwa-webpush` | hand-rolled service worker, VAPID web push (keys generated into `.env`), in-app notification bell, app-icon badge (Badging API) |
 | `thai-saas-ui-kit` | Tailwind v4 CSS-variable tokens with light + dark themes (next-themes), sidebar ↔ bottom-nav shell, status/urgent badges, sonner/radix/lucide conventions |

@@ -28,8 +28,19 @@ side.
 ### 1. Register a complete Thai font (Sarabun)
 
 Sarabun is the official Thai government font (open license) and matches formal
-report styling. Put the TTFs in `public/fonts/` and register with an absolute
-URL (react-pdf needs a resolvable `src`).
+report styling. Put the TTFs in `public/fonts/` and register with a resolvable
+`src` — an absolute URL when rendering in the **browser**; when rendering
+**server-side** (route handler / `renderToBuffer`) there is no origin, so use a
+filesystem path instead:
+
+```ts
+// server-side rendering — file paths, not URLs
+const dir = path.join(process.cwd(), 'public', 'fonts');
+Font.register({ family: 'Sarabun', fonts: [
+  { src: path.join(dir, 'Sarabun-Regular.ttf'), fontWeight: 400 },
+  { src: path.join(dir, 'Sarabun-Bold.ttf'),    fontWeight: 700 },
+]});
+```
 
 ```ts
 // lib/pdf/thai.ts  — see thai.ts in this skill folder for the full file
@@ -111,6 +122,10 @@ the component that builds the `<Document>`, or in a module-level effect). The
 After generating, actually check the output:
 - Open the produced PDF and read wrapped Thai lines end-to-end — the last
   character must be present.
+- In automated tests, check **content, not file size**:
+  `body.subarray(0,4).toString() === '%PDF'` proves it's a PDF, and
+  `body.toString('latin1').includes('Sarabun')` proves the Thai font is truly
+  embedded (a missing font still produces a plausible-sized file).
 - Count pages programmatically if "one page" is a requirement (parse the blob).
 - Confirm times render as intended (e.g. `HH:MM`, drop seconds if the form wants it).
 
