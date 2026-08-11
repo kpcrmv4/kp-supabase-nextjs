@@ -9,3 +9,10 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Next.js app
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
