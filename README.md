@@ -1,5 +1,11 @@
 # KP Supabase + Next.js — Claude Code Plugin
 
+> **หมายเหตุ:** repo นี้มีแอปตัวอย่างที่สร้างด้วย kit นี้อยู่ที่ root ด้วย —
+> **KP ราคารับซื้อของเก่า** (Next.js 16 + Supabase): ระบบตั้งราคารับซื้อแยกตาม
+> กลุ่มลูกค้า พร้อมร่าง/ตั้งเวลาเผยแพร่ และหน้า QR ให้ลูกค้าเช็คราคา
+> ดูสเปคเต็มใน [`CLAUDE.md`](CLAUDE.md) · รัน: `npm install && npm run dev`
+> (ต้องมี `.env.local` ตาม `.env.example`)
+
 A Claude Code **plugin marketplace** containing `kp-supabase-nextjs`: a reusable
 kit for the recurring stack — **Next.js (App Router) + Supabase + TypeScript +
 Tailwind**, a Thai-friendly PWA SaaS. Extracted from production code so the
