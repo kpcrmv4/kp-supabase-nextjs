@@ -5,14 +5,16 @@ description: >
   @supabase/ssr. Use when setting up login, session middleware, protected routes,
   role-based access (admin/staff), service-role admin routes, or a numeric PIN
   login. Encodes the four client factories (browser/server/admin/middleware), the
-  middleware auth gate, and three hard-won bugs: (1) middleware redirecting /api/*
+  middleware auth gate, and four hard-won bugs: (1) middleware redirecting /api/*
   to the HTML login page so server-side sign-in never sets a cookie, (2)
   route-handler sign-in cookies not propagating because they were written via
-  next/headers cookies() instead of onto the response, and (3) redirect loops
-  between middleware and the login page on special states. Also: signOut scope
-  'local' vs global, and the destructure-error-every-time rule. Triggers on:
-  supabase auth, @supabase/ssr, middleware session, signInWithPassword, RLS
-  auth.uid(), PIN login, signOut, redirect loop, rate limit.
+  next/headers cookies() instead of onto the response, (3) redirect loops
+  between middleware and the login page on special states, and (4) the matcher
+  gating /sw.js + /manifest.webmanifest so PWA install and web push silently
+  die for logged-out visitors. Also: signOut scope 'local' vs global, and the
+  destructure-error-every-time rule. Triggers on: supabase auth, @supabase/ssr,
+  middleware session, signInWithPassword, RLS auth.uid(), PIN login, signOut,
+  redirect loop, rate limit, sw.js 307, install prompt missing logged out.
 metadata:
   type: reference
   stack: nextjs-app-router, supabase, typescript
@@ -178,7 +180,9 @@ import { type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 export async function proxy(request: NextRequest) { return updateSession(request); }
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons/|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)'],
+  // sw.js + manifest MUST be excluded — a 307 on /sw.js kills PWA install
+  // and web push for logged-out visitors (Bug #4 below)
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|icons/|.*\\.(?:png|jpg|jpeg|svg|webp|ico)$).*)'],
 };
 ```
 
@@ -257,6 +261,24 @@ page. **Every time you add a redirect condition, trace whether the destination
 redirects back.** For special states (suspended, no-profile, forced password
 change) the login page must be allowed to **stay put** — show the reason and a
 sign-out button instead of auto-redirecting logged-in users away.
+
+## 🔴 Bug #4 — matcher gates `sw.js`/manifest → PWA + push die for logged-out users
+
+**Symptom:** the install prompt never appears and web push is dead — but
+**only for logged-out visitors**, i.e. the landing page every new user hits
+first. During development you're always logged in, so you never see it.
+Nothing errors: build green, console clean, every auth flow "passes".
+
+**Cause:** the matcher excludes image files but not `/sw.js` or
+`/manifest.webmanifest`, so the gate 307s them to `/login`. The spec forbids
+a service-worker script being served via redirect → `register()` rejects →
+the browser never counts the app as installable → `beforeinstallprompt`
+never fires, and every push subscription path dies with it.
+
+**Fix:** exclude both in the matcher (as in the example above), then verify
+as **anonymous** — `GET /sw.js` and `GET /manifest.webmanifest` must answer
+`200`, not `307` (cleared `storageState`, [kp-e2e-playwright-real-db]; the
+PWA side is [nextjs-pwa-webpush]).
 
 ## `signOut()` defaults to kicking every device
 
@@ -351,6 +373,8 @@ is brute-forceable in minutes. Non-negotiables:
       service-role key (+ `PIN_PEPPER` if used). Gitignored, never committed.
 - [ ] Middleware (`proxy.ts` on Next 16) excludes `/api/*` from the login
       redirect; gate uses `getClaims()`, not a per-request `getUser()`.
+- [ ] Matcher excludes `sw.js` + `manifest.webmanifest` (Bug #4) — verified
+      **anonymous**: both answer `200`, not `307`.
 - [ ] `/api/pin-login` is rate-limited (per IP + per account) with failures logged.
 - [ ] Every server-side sign-in route binds cookies to the response object.
 - [ ] Service-role client is imported only in server code.

@@ -4,13 +4,19 @@ description: >
   Next.js (App Router / Next 16) behaviors that fail SILENTLY — build green,
   typecheck green, feature dead. Use when a button does nothing after deploy of
   a new route, Tailwind classes vanish on new folders, notFound() returns 200,
-  a server action hangs for tens of seconds, or an env var is ignored. Covers
+  a server action hangs for tens of seconds, an env var is ignored, or a
+  date/"today" figure is right locally but wrong in production. Covers
   allowedDevOrigins (403 chunks → no hydration), Tailwind JIT not scanning new
   route groups, loading.tsx breaking notFound()'s 404 status, the
   revalidatePath('/', 'layout') full-app cache purge, after() for fan-out work,
-  and NEXT_PUBLIC_* being baked at dev-server start. Triggers on:
-  allowedDevOrigins, hydration dead buttons, tailwind class missing, notFound
-  200, revalidatePath slow, after next/server, fan-out, NEXT_PUBLIC restart.
+  NEXT_PUBLIC_* being baked at dev-server start, and Vercel running in UTC
+  (Thai dates / "today" buckets off by 7 hours vs UTC+7, pg_cron firing at the
+  wrong hour). Triggers on: allowedDevOrigins, hydration dead buttons,
+  tailwind class missing, notFound 200, revalidatePath slow, after
+  next/server, fan-out, NEXT_PUBLIC restart, timezone, UTC, Asia/Bangkok,
+  wrong date on Vercel, วันที่เพี้ยน, ยอดวันนี้ผิด, Failed to collect page
+  data, _not-found build error, stale .next, dev port changed, page with no
+  CSS.
 metadata:
   type: reference
   stack: nextjs-app-router, nextjs-16
@@ -98,6 +104,60 @@ Adding a key later (e.g. VAPID) does nothing until you restart — the feature
 just silently stays off. Restart dev/build after any env change involving
 `NEXT_PUBLIC_*`.
 
+## 7. Vercel runs in UTC — "today" is 7 hours off Thai time
+
+The dev machine sits in UTC+7; Vercel functions run in **UTC**. Everything
+looks right locally, then in production — every day between 00:00 and 06:59
+ICT:
+
+- `new Date().toLocaleDateString('th-TH')` (no `timeZone`) shows
+  **yesterday's** date on receipts, headers, reports.
+- Server-computed "today" ranges (daily dashboard, ยอดวันนี้) bucket rows into
+  the wrong day — numbers that are correct after 7am and wrong before it, the
+  worst kind of intermittent.
+- pg_cron schedules are UTC too: `0 1 * * *` fires at **08:00** Thai time.
+
+Make the zone explicit at every display and day-boundary point; never rely on
+server-local time:
+
+```ts
+// display — always pass timeZone
+new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium', timeZone: 'Asia/Bangkok' })
+  .format(date);
+```
+
+```sql
+-- day bucketing / "today" filters: convert in SQL, not in JS server code
+select date_trunc('day', created_at at time zone 'Asia/Bangkok') as day, count(*)
+from orders group by 1;
+
+-- pg_cron: subtract 7h — 17:00 UTC = 00:00 ICT
+select cron.schedule('daily-report', '0 17 * * *', $$ ... $$);
+```
+
+Storing `timestamptz` is already correct — the bug lives at **display and
+day-boundary** time. Setting `TZ=Asia/Bangkok` in Vercel env patches the Node
+runtime but not Edge/middleware and not pg_cron; treat it as a stopgap and
+keep the explicit `timeZone:` / `at time zone` anyway.
+
+## 8. `next build` while the dev server is running → phantom failures
+
+The dev server holds `.next`; running `next build` beside it fails with
+errors unrelated to your code — typically
+`Failed to collect page data for /_not-found`. Before any build whose verdict
+you intend to trust: **kill the dev server and `rm -rf .next`**, then build.
+Don't debug the "error" first — reproduce it on a clean build before believing
+it.
+
+## 9. `npm run dev` silently hops to another port
+
+Port busy → dev boots on the next free port, announced by one console line
+nobody reads. Tests and Chrome MCP then talk to the **old half-dead server**
+on the expected port — classic symptom: a page renders with no CSS from a
+stale process. Before an E2E round: kill stray dev servers, start fresh on a
+pinned port, and let global-setup's warm-up assert the app really answers
+there ([kp-e2e-playwright-real-db]).
+
 ## Checklist
 
 - [ ] `allowedDevOrigins` covers localhost, 127.0.0.1, and `*.localhost`.
@@ -106,3 +166,7 @@ just silently stays off. Restart dev/build after any env change involving
 - [ ] `revalidatePath` targets specific paths; `'layout'` purge is deliberate.
 - [ ] Post-action fan-out goes through `after()`; dispatcher batches queries.
 - [ ] Env var added ⇒ dev server restarted before judging the feature broken.
+- [ ] Every date format call passes `timeZone: 'Asia/Bangkok'`; day buckets
+      computed with `at time zone` in SQL; pg_cron hours converted from UTC.
+- [ ] Build verdicts come from a clean run: dev server killed, `.next` removed.
+- [ ] E2E targets a pinned port whose server was started fresh for this run.

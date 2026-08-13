@@ -11,7 +11,7 @@ the planning step.
 As you work, pull these skills (they auto-load by topic — reference them
 explicitly if needed): `nextjs-supabase-ssr-auth`, `supabase-rls-schema`,
 `supabase-large-data`, `nextjs-gotchas`, `react-pdf-thai`, `nextjs-pwa-webpush`,
-`thai-saas-ui-kit`, `kp-e2e-playwright-real-db`, plus
+`thai-saas-ui-kit`, `kp-acceptance-test-matrix`, `kp-e2e-playwright-real-db`, plus
 `vercel-react-best-practices` and `supabase-postgres-best-practices`.
 
 ## 1. Gather requirements (ONE short round)
@@ -30,7 +30,9 @@ explicitly if needed): `nextjs-supabase-ssr-auth`, `supabase-rls-schema`,
 - Don't ask what you can infer; pick sensible defaults and state them —
   defaults include: Thai UI, Vercel free (Hobby) tier with functions in
   `sin1`, Supabase project in Singapore (`ap-southeast-1`) so the DB sits next
-  to the functions, dark mode included.
+  to the functions, dark mode included, and **all dates pinned to
+  `Asia/Bangkok` explicitly** (Vercel runs UTC — `timeZone:` on every format,
+  `at time zone` for day buckets; `nextjs-gotchas` §7).
 
 ## 2. Write CLAUDE.md as the source-of-truth plan (before coding)
 Mirror the proven structure:
@@ -114,8 +116,16 @@ requested.
   `WriteAllText(..., UTF8Encoding(false))` if a script is unavoidable.
 - Get `tsc --noEmit` **and** `next build` **GREEN before any commit**. Conventional
   commits. **No attribution footer.**
+- **Every phase ships an acceptance matrix before its code** — follow
+  `kp-acceptance-test-matrix`: inventory the surface (routes, every button,
+  every option value, every endpoint × method, every role), then one row per
+  item asserted at all four layers (UI / UX / API / DB) with measurable
+  expected results — numbers and exact strings, never prose. Save as
+  `docs/test-plan/<phase>.md`, use the row IDs as test-title prefixes, and
+  don't sign a phase off until the coverage ratios are closed.
 - **Testing cadence** — follow the `kp-testing-cadence` skill: `tsc` every edit;
-  build + unit every ~2–3 units; E2E (Chrome MCP) at feature/phase gates **and**
+  build (+ unit only for pure logic — never mock Supabase) every ~2–3 units;
+  E2E (Chrome MCP) at feature/phase gates **and**
   immediately after any browser-only change (auth/cookie/middleware/redirect,
   RLS-visible, realtime, PWA/SW, PDF, responsive). Record this in `CLAUDE.md`.
 - Never commit secrets; `.env.local` gitignored.

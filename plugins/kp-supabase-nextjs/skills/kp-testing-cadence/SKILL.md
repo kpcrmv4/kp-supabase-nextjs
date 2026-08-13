@@ -27,11 +27,18 @@ it's too slow and flaky for that.
 | Tier | Run when | Catches | Cost |
 |------|----------|---------|------|
 | `tsc --noEmit` | every edit | type errors | cheap — run freely |
-| **build + unit** | every ~2–3 units / checkpoint | compile + logic regressions | cheap — this is the frequent gate |
+| **build (+ unit, when pure logic changed)** | every ~2–3 units / checkpoint | compile + logic regressions | cheap — this is the frequent gate |
 | **E2E (Chrome MCP)** | feature / phase gate | multi-role, responsive, critical pages | expensive + flaky — run at boundaries |
 
-The "every 2–3 units" frequency belongs to **build + unit**, not E2E. Let those
+The "every 2–3 units" frequency belongs to the **build** gate, not E2E. Let it
 catch regressions first; only then is an E2E run worth it.
+
+**"Unit" in this stack means pure logic only** — price-tier math, Thai
+date/`Asia/Bangkok` formatting, pagination arithmetic: functions with no
+Supabase client in sight. Do **not** mock the Supabase client to unit-test
+queries, auth, or RLS — a mock passes while the real policy fails; that whole
+class belongs to E2E against the real DB (**[kp-e2e-playwright-real-db]**).
+If a change touched no pure logic, the frequent gate is just `next build`.
 
 ## Browser-only triggers — run an E2E smoke *immediately* (don't wait for the gate)
 
@@ -56,16 +63,23 @@ a short targeted E2E right away:
 
 ## Keep Chrome MCP deterministic
 
+- **One browser instance per run — reuse it.** Do NOT open a fresh Chrome for
+  every test round while the old ones stay alive: instances stack (10+ is
+  easy in one session) until the machine runs out of RAM and freezes. Kill
+  all Chrome/Chrome-MCP processes **once at the start of the run**, open one
+  instance, and navigate/reuse tabs within it for every subsequent check.
 - Close leftover download/blob tabs before measuring — stale tabs corrupt
   screenshots and page-count checks.
 - Prefer `evaluate_script` assertions over eyeballing screenshots.
 - If the profile locks up, kill stray Chrome processes and retry, rather than
-  looping on the same flaky call.
+  looping on the same flaky call — but killing-and-relaunching is the
+  *recovery* path, not the per-test default.
 
 ## One-line rule
 
 **Build + unit every 2–3 units; E2E at feature/phase gates *and* right after any
-browser-only change.** Related: **[kp-e2e-playwright-real-db]** (*how* to run
-E2E reliably against the real DB — storageState, serial data, "did not run"),
-**[nextjs-supabase-ssr-auth]** (the cookie/middleware class of browser-only
-bugs), **[react-pdf-thai]**.
+browser-only change.** Related: **[kp-acceptance-test-matrix]** (*what* to
+assert — the measurable UI/UX/API/DB rows a run is checking against),
+**[kp-e2e-playwright-real-db]** (*how* to run E2E reliably against the real DB —
+storageState, serial data, "did not run"), **[nextjs-supabase-ssr-auth]** (the
+cookie/middleware class of browser-only bugs), **[react-pdf-thai]**.

@@ -1,7 +1,7 @@
 {
   "name": "kp-supabase-nextjs",
-  "version": "0.5.0",
-  "description": "KP Supabase + Next.js SaaS Kit — SSR cookie auth (+rate-limited PIN), RLS & migration workflow with multi-tenant RPC patterns, realtime broadcast + pg_cron, >1000-row pagination patterns, Next.js silent-failure gotchas, Playwright real-DB E2E mechanics, react-pdf Thai clipping fix, PWA/web-push with app-icon badge, Thai UI kit with dark mode. Skills auto-load by task; ships an env-parameterized read-only Supabase MCP, /new-kp-app scaffolder, and /setup-supabase-mcp.",
+  "version": "0.6.0",
+  "description": "KP Supabase + Next.js SaaS Kit — SSR cookie auth (+rate-limited PIN), RLS & migration workflow with multi-tenant RPC patterns, realtime broadcast + pg_cron, >1000-row pagination patterns, Next.js silent-failure gotchas, spec-driven acceptance matrices measured at UI/UX/API/DB, Playwright real-DB E2E mechanics, react-pdf Thai clipping fix, PWA/web-push with app-icon badge, Thai UI kit with dark mode. Skills auto-load by task; ships an env-parameterized read-only Supabase MCP, /new-kp-app scaffolder, and /setup-supabase-mcp.",
   "author": {
     "name": "KP"
   },
