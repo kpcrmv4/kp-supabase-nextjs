@@ -65,7 +65,8 @@ a short targeted E2E right away:
 ## One-line rule
 
 **Build + unit every 2–3 units; E2E at feature/phase gates *and* right after any
-browser-only change.** Related: **[kp-e2e-playwright-real-db]** (*how* to run
-E2E reliably against the real DB — storageState, serial data, "did not run"),
-**[nextjs-supabase-ssr-auth]** (the cookie/middleware class of browser-only
-bugs), **[react-pdf-thai]**.
+browser-only change.** Related: **[kp-acceptance-test-matrix]** (*what* to
+assert — the measurable UI/UX/API/DB rows a run is checking against),
+**[kp-e2e-playwright-real-db]** (*how* to run E2E reliably against the real DB —
+storageState, serial data, "did not run"), **[nextjs-supabase-ssr-auth]** (the
+cookie/middleware class of browser-only bugs), **[react-pdf-thai]**.

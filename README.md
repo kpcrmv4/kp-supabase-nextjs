@@ -32,6 +32,7 @@ Restart the session (or `/plugin`) so skills, commands, and the MCP load.
 | `nextjs-pwa-webpush` | hand-rolled service worker, VAPID web push (keys generated into `.env`), in-app notification bell, app-icon badge (Badging API) |
 | `thai-saas-ui-kit` | Tailwind v4 CSS-variable tokens with light + dark themes (next-themes), sidebar ↔ bottom-nav shell, status/urgent badges, sonner/radix/lucide conventions |
 | `kp-testing-cadence` | when to run which check — `tsc` every edit, build+unit every ~2–3 units, E2E (Chrome MCP) at gates + after browser-only changes |
+| `kp-acceptance-test-matrix` | what a spec must assert — surface inventory (every route/button/option/endpoint/role), one row each measured at UI/UX/API/DB, negative + RLS + transition rows, traceability IDs, coverage gate; ships `TEST-PLAN-template.md` |
 
 ### Commands
 

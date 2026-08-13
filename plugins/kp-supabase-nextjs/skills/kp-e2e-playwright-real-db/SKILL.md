@@ -17,8 +17,9 @@ metadata:
 
 # Playwright E2E on a real database
 
-Companion to **[kp-testing-cadence]** (which decides *when* to run E2E — this
-skill is *how*). Test against the real Supabase project through a **separate
+Companion to **[kp-testing-cadence]** (which decides *when* to run E2E) and
+**[kp-acceptance-test-matrix]** (*what* each row must assert at UI/UX/API/DB) —
+this skill is *how*. Test against the real Supabase project through a **separate
 org** — RLS already isolates tenants, and real-RLS confidence beats mocks.
 
 ## Auth: log in once per role, never per test

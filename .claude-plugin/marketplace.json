@@ -11,10 +11,10 @@
     {
       "name": "kp-supabase-nextjs",
       "source": "./plugins/kp-supabase-nextjs",
-      "description": "KP Supabase + Next.js SaaS Kit — SSR cookie auth (+rate-limited PIN), RLS & MCP migration workflow with multi-tenant RPC patterns, realtime broadcast + pg_cron, >1000-row pagination, Next.js silent-failure gotchas, Playwright real-DB E2E, react-pdf Thai fix, PWA/web-push with app-icon badge, Thai UI kit with dark mode. Includes /new-kp-app scaffolder.",
-      "version": "0.5.0",
+      "description": "KP Supabase + Next.js SaaS Kit — SSR cookie auth (+rate-limited PIN), RLS & MCP migration workflow with multi-tenant RPC patterns, realtime broadcast + pg_cron, >1000-row pagination, Next.js silent-failure gotchas, spec-driven acceptance matrices measured at UI/UX/API/DB, Playwright real-DB E2E, react-pdf Thai fix, PWA/web-push with app-icon badge, Thai UI kit with dark mode. Includes /new-kp-app scaffolder.",
+      "version": "0.6.0",
       "category": "development",
-      "keywords": ["nextjs", "supabase", "rls", "pagination", "react-pdf", "thai", "pwa", "web-push", "ssr-auth", "dark-mode", "pg-cron", "playwright"]
+      "keywords": ["nextjs", "supabase", "rls", "pagination", "react-pdf", "thai", "pwa", "web-push", "ssr-auth", "dark-mode", "pg-cron", "playwright", "acceptance-testing"]
     }
   ]
 }
