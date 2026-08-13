@@ -301,8 +301,19 @@ return () => { supabase.removeChannel(ch); };
 // invalidate = () => queryClient.invalidateQueries({ queryKey: qk.tasks })
 ```
 
+Events are **per row** — a bulk update touching 6 rows fires 6 events. A
+callback that calls `router.refresh()` (or any hard refetch) must be
+**debounced** (~200 ms), or one commit × N open screens stacks N re-renders
+(measured: 6 rows → 6 refreshes → debounced to 1). `invalidateQueries` is
+cheaper but debounce it too on bulk-write tables.
+
 `postgres_changes` remains acceptable for a quick prototype only — do not
-ship it in a product expected to grow.
+ship it in a product expected to grow. Even there, two traps:
+
+- **Server-side `filter:` is unreliable** — a `NULL` column never matches
+  any filter, and filtering by `status=x` means you never hear the event
+  where a row *leaves* `x`. Subscribe unfiltered and filter in the callback.
+- The per-row debounce rule above applies identically.
 
 ## Scheduled jobs — pg_cron + pg_net (not Vercel cron)
 

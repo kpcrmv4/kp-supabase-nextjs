@@ -9,8 +9,11 @@ description: >
   exceed 5), status/category/urgent badges, loading skeletons + empty + error
   states (loading.tsx / error.tsx boundaries, retry cards, pending buttons),
   toasts instead of alert(), accessible modals for confirm/ask, IBM Plex Sans
-  Thai typography, print/A4 styles, and lucide icons (never emoji). Triggers
-  on: Tailwind tokens, design system, dark mode, theme toggle, next-themes,
+  Thai typography, Thai line-breaking with NBSP-in-formatters, color-scheme
+  vs Chrome force-dark, print/A4 styles, and lucide icons (never emoji).
+  Triggers on: Tailwind tokens, design system, dark mode, theme toggle,
+  color-scheme, force dark, ปรับเว็บไซต์ให้เป็นสีเข้ม, Thai text wraps wrong,
+  ตัดบรรทัด, nbsp, next-themes,
   bottom nav, bottom sheet, FAB, center action button, more menu, เพิ่มเติม,
   sidebar, status badge, skeleton, loading state, empty state, error state,
   loading.tsx, error.tsx, pagination UI, pager, page numbers, แสดง...จาก...รายการ,
@@ -97,6 +100,21 @@ that never names a hex is automatically dark-ready.
   dark. Check badge text/bg pairs at ≥ 4.5:1 in both themes.
 - The dark sidebar barely changes — deepen it slightly so it still reads as
   chrome against the dark canvas.
+- **Declare `color-scheme` — or Chrome force-dark repaints you invisibly.**
+  Android Chrome's "ปรับเว็บไซต์ให้เป็นสีเข้ม" (auto-dark, widely enabled in
+  Thailand) recolors light surfaces **at paint time** while `getComputedStyle`
+  still reports the light value — DevTools shows `#f5f5f6`, the screen shows
+  dark; undebuggable from the inspector. Declaring the scheme tells Chrome the
+  site handles dark itself, which opts it out of force-dark:
+
+  ```css
+  :root { color-scheme: light; }
+  .dark { color-scheme: dark; }
+  ```
+
+  (plus `<meta name="color-scheme" content="light dark">`). To prove
+  force-dark is the culprit, set a sentinel `--surface: lime` — if the pixels
+  aren't green, something is repainting after you.
 - **PWA**: keep `theme_color` in the manifest matched to the light canvas and
   set `<meta name="theme-color">` per scheme with `media` queries.
 - **Print and PDF are always light** — force light tokens under
@@ -109,6 +127,23 @@ that never names a hex is automatically dark-ready.
   (`--font-thai`, `--font-thai-looped`).
 - Thai has tall ascenders/descenders — give list rows and inputs a little more
   vertical breathing room than a Latin design would.
+
+### Thai line-breaking — NBSP belongs in the formatter
+
+Thai puts real spaces inside things that must never split: ชื่อ นามสกุล,
+`12 ส.ค. 69`, `09:00 น.`, `คงเหลือ 10 / 12`. The browser treats every space
+as a break point, so narrow cards wrap mid-phrase: `ปาล์ม / เซลล์`,
+`12 ส.ค. / 69`, `09:00 / น.`.
+
+The formula that holds up:
+
+- Emit **NBSP (` `)** inside the shared formatters — dates, times,
+  quantities, full names — so one place controls wrapping app-wide, instead
+  of chasing `<span>`s per screen.
+- Give each formatter a **`plain` option** that emits normal spaces for
+  CSV/PDF — spreadsheets and [react-pdf-thai] must not receive NBSPs.
+- `whitespace-nowrap` only on short phrases that must stay whole (badge
+  labels, `คงเหลือ x / y`) — never on paragraphs, which just overflows.
 
 ## Responsive app shell (the core pattern)
 

@@ -11,7 +11,8 @@ description: >
   pagination, pushing filters to the DB, RPC/view aggregates, list
   virtualization, and chunked exports. Triggers on: 1000 rows, max rows,
   pagination, range(), useInfiniteQuery, keyset, cursor pagination, count
-  exact, aggregate, ข้อมูลไม่ครบ, virtualized list.
+  exact, aggregate, ข้อมูลไม่ครบ, virtualized list, select string literal,
+  supabase rows any type.
 metadata:
   type: reference
   stack: supabase, nextjs, react-query
@@ -158,6 +159,23 @@ exports, loop `.range()` in chunks server-side until a short page comes back —
 or better, aggregate in SQL first and render the summary. Never build an
 export from a single un-ranged select.
 
+## `.select()` must be ONE string literal
+
+TS inference reads the **literal** column list. Build it dynamically —
+concatenation, a variable, `.join()` — and the row type silently degrades to
+`any`: every downstream field access typechecks no matter what, and typos
+ship.
+
+```ts
+const cols = 'id, name, status';
+supabase.from('tasks').select(cols);              // ❌ rows are any
+supabase.from('tasks').select('id,' + extra);     // ❌ rows are any
+supabase.from('tasks').select('id, name, status'); // ✅ typed rows
+```
+
+Need two shapes? Write two literals (two small query helpers), not one
+parameterized string.
+
 ## Checklist
 
 - [ ] Every list query has `.order()` (with `id` tie-breaker) + `.range()`.
@@ -167,3 +185,5 @@ export from a single un-ranged select.
 - [ ] Dashboard stats come from head-counts or an RPC, never fetched rows.
 - [ ] Long lists virtualized; realtime invalidates keys, never patches pages.
 - [ ] Exports/PDFs chunk with `.range()` or aggregate in SQL.
+- [ ] Every `.select()` is a single string literal — no concatenation/variables
+      (dynamic strings silently type rows as `any`).

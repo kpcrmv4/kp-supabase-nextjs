@@ -63,11 +63,17 @@ a short targeted E2E right away:
 
 ## Keep Chrome MCP deterministic
 
+- **One browser instance per run — reuse it.** Do NOT open a fresh Chrome for
+  every test round while the old ones stay alive: instances stack (10+ is
+  easy in one session) until the machine runs out of RAM and freezes. Kill
+  all Chrome/Chrome-MCP processes **once at the start of the run**, open one
+  instance, and navigate/reuse tabs within it for every subsequent check.
 - Close leftover download/blob tabs before measuring — stale tabs corrupt
   screenshots and page-count checks.
 - Prefer `evaluate_script` assertions over eyeballing screenshots.
 - If the profile locks up, kill stray Chrome processes and retry, rather than
-  looping on the same flaky call.
+  looping on the same flaky call — but killing-and-relaunching is the
+  *recovery* path, not the per-test default.
 
 ## One-line rule
 

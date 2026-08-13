@@ -112,7 +112,10 @@ side is wrong.
 - Chrome MCP: some machines can't open `localhost` — use
   `http://127.0.0.1:3000` (and add both to `allowedDevOrigins`, see
   [nextjs-gotchas]). A stale Chrome on the same profile blocks launching
-  (`browser is already running`) — kill it first.
+  (`browser is already running`) — kill it first. And **never open a new
+  instance per test round while old ones live** — they stack by the dozen
+  and freeze the machine; kill once at run start, then reuse the single
+  instance ([kp-testing-cadence]).
 
 ## Checklist
 

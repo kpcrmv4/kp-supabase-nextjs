@@ -23,15 +23,15 @@ Restart the session (or `/plugin`) so skills, commands, and the MCP load.
 
 | Skill | Covers |
 |-------|--------|
-| `nextjs-supabase-ssr-auth` | @supabase/ssr four clients, proxy/middleware gate (`getClaims()`), rate-limited PIN login, new publishable/secret keys, and two cookie bugs: API→`/login` redirect, and route-handler sign-in cookies that must bind to the response |
+| `nextjs-supabase-ssr-auth` | @supabase/ssr four clients, proxy/middleware gate (`getClaims()`), rate-limited PIN login, new publishable/secret keys, and four gate bugs: API→`/login` redirect, sign-in cookies that must bind to the response, middleware↔login loops, and the matcher 307ing `sw.js`/manifest (kills PWA install+push logged-out) |
 | `supabase-rls-schema` | RLS, `is_admin()` SECURITY DEFINER, column-guard triggers, file + MCP migration workflow, realtime broadcast-from-database, pg_cron + pg_net scheduled jobs |
-| `supabase-large-data` | the silent 1,000-row PostgREST cap — `.range()` discipline, page/infinite/keyset pagination, DB-side filters, RPC aggregates, virtualization, chunked exports |
-| `nextjs-gotchas` | silent failures: allowedDevOrigins hydration death, Tailwind JIT vs new folders, loading.tsx breaking notFound() 404, revalidatePath layout purge, after() fan-out, NEXT_PUBLIC baked at start, Vercel-runs-UTC date drift (explicit Asia/Bangkok everywhere) |
+| `supabase-large-data` | the silent 1,000-row PostgREST cap — `.range()` discipline, page/infinite/keyset pagination, DB-side filters, RPC aggregates, virtualization, chunked exports, `.select()` single-literal rule (dynamic strings type rows as `any`) |
+| `nextjs-gotchas` | silent failures: allowedDevOrigins hydration death, Tailwind JIT vs new folders, loading.tsx breaking notFound() 404, revalidatePath layout purge, after() fan-out, NEXT_PUBLIC baked at start, Vercel-runs-UTC date drift (explicit Asia/Bangkok everywhere), stale-`.next` build phantoms, silent dev-port hop |
 | `kp-e2e-playwright-real-db` | Playwright against the real DB — per-role storageState (auth rate limits), org-scoped assertions, serial shared data, "did not run" reading, warm-up, hydration-signal clicks |
 | `react-pdf-thai` | Thai last-glyph clipping fix (`registerHyphenationCallback((w)=>[w])` + trailing-space + Sarabun), WebP-embed gotcha; ships copy-ready `thai.ts` |
-| `nextjs-pwa-webpush` | hand-rolled service worker, VAPID web push (keys generated into `.env`), in-app notification bell, app-icon badge (Badging API) |
-| `thai-saas-ui-kit` | Tailwind v4 CSS-variable tokens with light + dark themes (next-themes), sidebar ↔ bottom-nav shell, status/urgent badges, sonner/radix/lucide conventions |
-| `kp-testing-cadence` | when to run which check — `tsc` every edit, build (+pure-logic unit; never mock Supabase) every ~2–3 units, E2E (Chrome MCP) at gates + after browser-only changes |
+| `nextjs-pwa-webpush` | hand-rolled service worker, VAPID web push (keys generated into `.env`), in-app notification bell, app-icon badge (Badging API), install-prompt realities (iOS never fires beforeinstallprompt, install-before-push, pure-function gating, status panel) |
+| `thai-saas-ui-kit` | Tailwind v4 CSS-variable tokens with light + dark themes (next-themes), sidebar ↔ bottom-nav shell, status/urgent badges, sonner/radix/lucide conventions, color-scheme vs Chrome force-dark, Thai NBSP line-breaking |
+| `kp-testing-cadence` | when to run which check — `tsc` every edit, build (+pure-logic unit; never mock Supabase) every ~2–3 units, E2E (Chrome MCP) at gates + after browser-only changes, one reused Chrome instance per run |
 | `kp-acceptance-test-matrix` | what a spec must assert — surface inventory (every route/button/option/endpoint/role), one row each measured at UI/UX/API/DB, negative + RLS + transition rows, traceability IDs, coverage gate; ships `TEST-PLAN-template.md` |
 
 ### Commands

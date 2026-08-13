@@ -14,7 +14,9 @@ description: >
   wrong hour). Triggers on: allowedDevOrigins, hydration dead buttons,
   tailwind class missing, notFound 200, revalidatePath slow, after
   next/server, fan-out, NEXT_PUBLIC restart, timezone, UTC, Asia/Bangkok,
-  wrong date on Vercel, วันที่เพี้ยน, ยอดวันนี้ผิด.
+  wrong date on Vercel, วันที่เพี้ยน, ยอดวันนี้ผิด, Failed to collect page
+  data, _not-found build error, stale .next, dev port changed, page with no
+  CSS.
 metadata:
   type: reference
   stack: nextjs-app-router, nextjs-16
@@ -138,6 +140,24 @@ day-boundary** time. Setting `TZ=Asia/Bangkok` in Vercel env patches the Node
 runtime but not Edge/middleware and not pg_cron; treat it as a stopgap and
 keep the explicit `timeZone:` / `at time zone` anyway.
 
+## 8. `next build` while the dev server is running → phantom failures
+
+The dev server holds `.next`; running `next build` beside it fails with
+errors unrelated to your code — typically
+`Failed to collect page data for /_not-found`. Before any build whose verdict
+you intend to trust: **kill the dev server and `rm -rf .next`**, then build.
+Don't debug the "error" first — reproduce it on a clean build before believing
+it.
+
+## 9. `npm run dev` silently hops to another port
+
+Port busy → dev boots on the next free port, announced by one console line
+nobody reads. Tests and Chrome MCP then talk to the **old half-dead server**
+on the expected port — classic symptom: a page renders with no CSS from a
+stale process. Before an E2E round: kill stray dev servers, start fresh on a
+pinned port, and let global-setup's warm-up assert the app really answers
+there ([kp-e2e-playwright-real-db]).
+
 ## Checklist
 
 - [ ] `allowedDevOrigins` covers localhost, 127.0.0.1, and `*.localhost`.
@@ -148,3 +168,5 @@ keep the explicit `timeZone:` / `at time zone` anyway.
 - [ ] Env var added ⇒ dev server restarted before judging the feature broken.
 - [ ] Every date format call passes `timeZone: 'Asia/Bangkok'`; day buckets
       computed with `at time zone` in SQL; pg_cron hours converted from UTC.
+- [ ] Build verdicts come from a clean run: dev server killed, `.next` removed.
+- [ ] E2E targets a pinned port whose server was started fresh for this run.

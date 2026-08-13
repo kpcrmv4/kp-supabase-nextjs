@@ -110,6 +110,32 @@ behaviour silently drift from your code.
 - Register the SW on mount; capture `beforeinstallprompt` in a `useInstallPrompt`
   hook to show a custom install button.
 
+### Install-prompt realities
+
+- **The auth middleware must not gate `/sw.js` or `/manifest.webmanifest`** —
+  a 307 on the SW script makes `register()` reject, the app is never counted
+  installable, and install + push die silently for logged-out visitors. See
+  [nextjs-supabase-ssr-auth] Bug #4 for the matcher fix; verify anonymous:
+  both answer `200`.
+- **iOS Safari never fires `beforeinstallprompt`.** Install is manual
+  (แชร์ → เพิ่มลงในหน้าจอโฮม) — detect iOS and show instructions instead of a
+  button that will never appear.
+- Chrome fires it **at most once per device state**: already installed, or
+  previously dismissed → it won't fire again. That state lives on the user's
+  device — "the install button doesn't show" is not reproducible on your
+  machine, so design every screen to work without it.
+- **iOS grants Web Push only to home-screen apps.** "Install first, then ask
+  notification permission" is a hard platform requirement, not a UX
+  preference — there is no push prompt in a Safari tab.
+- `display-mode: standalone` **cannot be emulated in E2E.** Keep the
+  install/push gating decision in a pure function (inputs: UA, display-mode,
+  permission, subscription state) and unit-test that — this is exactly the
+  pure-logic unit tier in [kp-testing-cadence].
+- Ship a **permanent status panel** in the account/settings page (installed?
+  permission? subscription alive on this device?) — the auto banner alone is
+  not enough, and the panel is your only remote-debugging window into
+  device-local state.
+
 ## Web Push — VAPID
 
 Generate VAPID keys **at scaffold time** and write them into `.env.local`
@@ -234,6 +260,11 @@ notify the member. Fire both the in-app insert and the web push in the same rout
 
 - [ ] `/sw.js` served with `no-cache` + `Service-Worker-Allowed: /`.
 - [ ] Manifest + icons (192/512/maskable) + monochrome `badge-96.png`; install prompt wired.
+- [ ] `/sw.js` + manifest excluded from the auth matcher — anonymous `GET`
+      answers `200` ([nextjs-supabase-ssr-auth] Bug #4).
+- [ ] iOS path: manual install instructions; push permission asked only after
+      home-screen install. Gating logic is a unit-tested pure function.
+- [ ] Account page has a persistent install/push status panel.
 - [ ] VAPID keys generated once into `.env.local` (never overwritten), private key
       server-only, same pair set in Vercel env.
 - [ ] `push_subscriptions.endpoint` unique; dead endpoints pruned after send.
