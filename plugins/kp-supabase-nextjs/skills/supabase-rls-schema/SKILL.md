@@ -330,6 +330,8 @@ select cron.schedule('notify-overdue-tasks', '*/15 * * * *', $$
 - `cron.schedule` with an existing job name **updates** it — idempotent, safe
   to re-run in migrations.
 - 🔴 **pg_cron runs in UTC.** Thai time is UTC+7: 08:00 น. ไทย = `0 1 * * *`.
+  Vercel functions are UTC too — dates/"today" buckets need an explicit
+  `Asia/Bangkok` at display and query time; see [nextjs-gotchas] §7.
 - Every `/api/cron/*` route must verify the `CRON_SECRET` bearer header
   (generated into `.env` at scaffold — see `/new-kp-app`) before doing work.
 - Prefer pure-SQL jobs over HTTP whenever the work is data-only.

@@ -30,7 +30,9 @@ explicitly if needed): `nextjs-supabase-ssr-auth`, `supabase-rls-schema`,
 - Don't ask what you can infer; pick sensible defaults and state them —
   defaults include: Thai UI, Vercel free (Hobby) tier with functions in
   `sin1`, Supabase project in Singapore (`ap-southeast-1`) so the DB sits next
-  to the functions, dark mode included.
+  to the functions, dark mode included, and **all dates pinned to
+  `Asia/Bangkok` explicitly** (Vercel runs UTC — `timeZone:` on every format,
+  `at time zone` for day buckets; `nextjs-gotchas` §7).
 
 ## 2. Write CLAUDE.md as the source-of-truth plan (before coding)
 Mirror the proven structure:
@@ -122,7 +124,8 @@ requested.
   `docs/test-plan/<phase>.md`, use the row IDs as test-title prefixes, and
   don't sign a phase off until the coverage ratios are closed.
 - **Testing cadence** — follow the `kp-testing-cadence` skill: `tsc` every edit;
-  build + unit every ~2–3 units; E2E (Chrome MCP) at feature/phase gates **and**
+  build (+ unit only for pure logic — never mock Supabase) every ~2–3 units;
+  E2E (Chrome MCP) at feature/phase gates **and**
   immediately after any browser-only change (auth/cookie/middleware/redirect,
   RLS-visible, realtime, PWA/SW, PDF, responsive). Record this in `CLAUDE.md`.
 - Never commit secrets; `.env.local` gitignored.

@@ -27,11 +27,18 @@ it's too slow and flaky for that.
 | Tier | Run when | Catches | Cost |
 |------|----------|---------|------|
 | `tsc --noEmit` | every edit | type errors | cheap — run freely |
-| **build + unit** | every ~2–3 units / checkpoint | compile + logic regressions | cheap — this is the frequent gate |
+| **build (+ unit, when pure logic changed)** | every ~2–3 units / checkpoint | compile + logic regressions | cheap — this is the frequent gate |
 | **E2E (Chrome MCP)** | feature / phase gate | multi-role, responsive, critical pages | expensive + flaky — run at boundaries |
 
-The "every 2–3 units" frequency belongs to **build + unit**, not E2E. Let those
+The "every 2–3 units" frequency belongs to the **build** gate, not E2E. Let it
 catch regressions first; only then is an E2E run worth it.
+
+**"Unit" in this stack means pure logic only** — price-tier math, Thai
+date/`Asia/Bangkok` formatting, pagination arithmetic: functions with no
+Supabase client in sight. Do **not** mock the Supabase client to unit-test
+queries, auth, or RLS — a mock passes while the real policy fails; that whole
+class belongs to E2E against the real DB (**[kp-e2e-playwright-real-db]**).
+If a change touched no pure logic, the frequent gate is just `next build`.
 
 ## Browser-only triggers — run an E2E smoke *immediately* (don't wait for the gate)
 

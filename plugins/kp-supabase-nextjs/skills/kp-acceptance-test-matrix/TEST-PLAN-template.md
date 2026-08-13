@@ -71,6 +71,7 @@ hidden button — see `supabase-rls-schema`.
 | | list at > 1,000 rows | paginated, no silent truncation | ☐ |
 | | Thai PDF | `%PDF` magic bytes + `Sarabun` embedded; last glyph not clipped | ☐ |
 | | dark mode | tokens applied, contrast holds | ☐ |
+| | timezone (Vercel = UTC) | dates render as `Asia/Bangkok`; "today" buckets correct for a row inserted 23:30 ICT and one at 00:30 ICT; pg_cron hour converted | ☐ |
 
 ## 6. Sign-off
 
